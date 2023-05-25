@@ -1,4 +1,5 @@
   #define MIN_LIGHT 20
+  int light_level = 0;
   
   float getWaterLevel()
   {

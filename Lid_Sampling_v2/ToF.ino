@@ -50,3 +50,20 @@ float get_water_level()
   }
   return water_level_sum / 100; //return the average water level
 }
+
+float calculate_water()
+{
+  if(new_water_level <= water_level)
+  {
+    //if the water level increased, change the water level variable to the new measured level
+    //we say the water level "increased" if the measured water level is closer to the lid, which would result in a smaller measurement
+    water_level = new_water_level;
+  }
+  else if(new_water_level > water_level)
+  {
+    water_level = new_water_level;
+    //add the amount of water consumed to the total amount. Formula is just the volume of a cylinder
+    water_consumed = water_consumed + (new_water_level - water_level) * (3.141592) * (0.5*width*width)
+  }
+}
+

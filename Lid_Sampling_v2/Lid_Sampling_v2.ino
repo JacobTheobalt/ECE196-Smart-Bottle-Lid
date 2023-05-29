@@ -12,7 +12,7 @@
 
 #define DEV_I2C Wire
 
-// Components.
+//Components.
 VL53L4CD sensor_vl53l4cd_sat(&DEV_I2C, A1);
 //Create a instance of class LSM6DS3
 LSM6DS3 myIMU(I2C_MODE, 0x6A);    //I2C device address 0x6A
@@ -24,6 +24,15 @@ struct Positions
   float y;
   float z;
 };
+//create an enum for the Functional State Machine
+enum Bottle
+{
+  WAIT,
+  MEASURE,
+  DISPLAY,
+};
+//initialize the Bottle to be in the WAIT state
+enum Bottle state = WAIT;
 //initialize a Position variable called acceleration
 Positions acceleration = {0, 0, 0};
 //Non-blocking timing purposes
@@ -41,50 +50,90 @@ float avg_x = 0;
 float margin = 0.1;
 //array for storing water levels then getting the average
 float water_levels[100];
-//variable for keeping track of water level
+//variables for keeping track of water level
 float water_level = 0;
+float new_water_level = 0;
+//variable for tracking water consumption
+unsigned float water_consumed = 0;
+//variable for tracking lid on/off
+unsigned float light_level;
+//define the width of the user's water bottle. Default to standard width of 91mm
+unsigned int width = 91;
+//define volume of the user's water bottle. Default to 40oz.
+unsigned int volume = 40;
+//photodiode pin
+int pdiode = A1;
 
 void setup() {
-    // put your setup code here, to run once:
+  //do all the setup work in other functions for cleaner code
   setup_IMU();
   setup_ToF();
+  pinMode(pdiode, INPUT);
 }
 
 void loop() 
 {
-  //fills the arrays with measurement data
-  get_accelerations();
-  get_averages();
-
-  if(acceptable_position())
+  //###############################################################################################
+  if(state == WAIT)
   {
-    Serial.println("Upright position!");
-    //define the initial positions only if the bottle is in an acceptable position at the time of measurement
-    acceleration.z = avg_z;
-    acceleration.y = avg_y;
-    acceleration.x = avg_x;
-    delay(100);
-    //get the new average values
+    //check if the lid has been removed
+      //then, wait until the lid has been put back on
+        //when it has, change the state to measure
+  }
+  //###############################################################################################
+  if(state == MEASURE)
+  {
+    //fills the arrays with measurement data
     get_accelerations();
     get_averages();
-    if(check_stability())
+
+    if(acceptable_position())
     {
-      Serial.println("Stable!");
-      water_level = get_water_level();
-      Serial.println(water_level);
+      Serial.println("Upright position!");
+      //define the initial positions only if the bottle is in an acceptable position at the time of measurement
+      acceleration.z = avg_z;
+      acceleration.y = avg_y;
+      acceleration.x = avg_x;
+      delay(100);
+      //get the new average values
+      get_accelerations();
+      get_averages();
+      //if the bottle position is similar to the position measured earlier,
+      //then check the water level
+      if(check_stability())
+      {
+        Serial.println("Stable!");
+        //if there is no initial water level yet, define the initial water level
+        if(water_level == 0)
+        {
+          water_level = get_water_level();
+          new_water_level = water_level;
+        }
+        else
+        {
+          new_water_level = get_water_level();
+        }
+        calculate_water();
+        Serial.println(new_water_level);
+      }
+      else
+      {
+        Serial.println("Unstable!");
+        //wait a minute and then try again.
+        delay(1000);
+      }
     }
     else
     {
-      Serial.println("Unstable!");
-      //wait a minute and then try again.
-      delay(1000);
+      Serial.println("Not Upright!");
+      acceleration.z = 0;
+      acceleration.y = 0;
+      acceleration.x = 0;
     }
   }
-  else
+  //###############################################################################################
+  if(state == DISPLAY)
   {
-    Serial.println("Not Upright!");
-    acceleration.z = 0;
-    acceleration.y = 0;
-    acceleration.x = 0;
+    //change the display to the current amount of water consumed
   }
 }

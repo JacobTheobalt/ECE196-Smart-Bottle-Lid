@@ -44,7 +44,7 @@ void setup()
 
 void loop()
 {
-  if(current_time - start_time > 2000 && checkLid() && checkStability())
+  if(current_time - start_time > 2000)
   {
     Serial.println(getWaterLevel());
     start_time = millis();

@@ -9,6 +9,9 @@
 #include <stdint.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <SPI.h>
 
 #define DEV_I2C Wire
 
@@ -29,7 +32,7 @@ enum Bottle
 {
   WAIT,
   MEASURE,
-  DISPLAY,
+  LOG_DATA,
 };
 //initialize the Bottle to be in the WAIT state
 enum Bottle state = WAIT;
@@ -54,20 +57,21 @@ float water_levels[100];
 float water_level = 0;
 float new_water_level = 0;
 //variable for tracking water consumption
-unsigned float water_consumed = 0;
+float water_consumed = 0;
 //variable for tracking lid on/off
-unsigned float light_level;
+float light_level;
 //define the width of the user's water bottle. Default to standard width of 91mm
 unsigned int width = 91;
 //define volume of the user's water bottle. Default to 40oz.
 unsigned int volume = 40;
 //photodiode pin
-int pdiode = A1;
+int pdiode = A0;
 
 void setup() {
   //do all the setup work in other functions for cleaner code
   setup_IMU();
   setup_ToF();
+  setup_LCD();
   pinMode(pdiode, INPUT);
 }
 
@@ -76,20 +80,37 @@ void loop()
   //###############################################################################################
   if(state == WAIT)
   {
-    //check if the lid has been removed
-      //then, wait until the lid has been put back on
-        //when it has, change the state to measure
+    //check the state of the lid
+    //lid_on() returns true if lid is on, false otherwise.
+    bool lid_state = lid_on();
+    //if the lid is off, wait until it is put back on
+    if(lid_state == false)
+    {
+      //while the lid is detected as off, wait 10 seconds and check again
+      while(!lid_on())
+      {
+        delay(10000);
+      }
+      //once the lid is placed back on, measure the water level
+      state = MEASURE;
+    }
+    //if the lid is on, wait 3 seconds and check again 
+    if(lid_state == true)
+    {
+      delay(3000);
+    }
   }
   //###############################################################################################
   if(state == MEASURE)
   {
+    showInDisplay("time to measure");
     //fills the arrays with measurement data
     get_accelerations();
     get_averages();
 
     if(acceptable_position())
     {
-      Serial.println("Upright position!");
+      showInDisplay("Upright position!");
       //define the initial positions only if the bottle is in an acceptable position at the time of measurement
       acceleration.z = avg_z;
       acceleration.y = avg_y;
@@ -102,7 +123,7 @@ void loop()
       //then check the water level
       if(check_stability())
       {
-        Serial.println("Stable!");
+        showInDisplay("Stable!");
         //if there is no initial water level yet, define the initial water level
         if(water_level == 0)
         {
@@ -114,26 +135,30 @@ void loop()
           new_water_level = get_water_level();
         }
         calculate_water();
-        Serial.println(new_water_level);
+        //go to wait state since we took our measurement already
+        state = LOG_DATA;
       }
       else
       {
-        Serial.println("Unstable!");
-        //wait a minute and then try again.
-        delay(1000);
+        showInDisplay("Unstable!");
+        //wait 30 seconds and then try again.
+        delay(30000);
       }
     }
     else
     {
-      Serial.println("Not Upright!");
+      showInDisplay("Not Upright!");
       acceleration.z = 0;
       acceleration.y = 0;
       acceleration.x = 0;
     }
   }
   //###############################################################################################
-  if(state == DISPLAY)
+  if(state == LOG_DATA)
   {
-    //change the display to the current amount of water consumed
+    //send the data to the LCD
+    String hydration = String(water_consumed, 2);
+    showInDisplay(hydration);
+    state = WAIT;
   }
 }

@@ -1,6 +1,3 @@
-  #define MIN_LIGHT 20
-  int light_level = 0;
-  
   float getWaterLevel()
   {
     uint8_t NewDataReady = 0;
@@ -24,22 +21,4 @@
               results.signal_per_spad_kcps);
     }
       return results.distance_mm; //return the range read in mm
-  }
-
-  bool checkLid()
-  {
-    light_level = analogRead(pdiodePin)
-    if(light_level > MIN_LIGHT)
-    {
-      return true;
-    }
-    else
-    {
-      return false;
-    }
-  }
-
-  bool checkStability()
-  {
-    //insert code here for stability checking using the IMU
   }

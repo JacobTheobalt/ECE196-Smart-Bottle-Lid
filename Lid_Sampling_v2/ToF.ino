@@ -51,7 +51,7 @@ float get_water_level()
   return water_level_sum / 100; //return the average water level
 }
 
-float calculate_water()
+void calculate_water()
 {
   if(new_water_level <= water_level)
   {
@@ -63,7 +63,7 @@ float calculate_water()
   {
     water_level = new_water_level;
     //add the amount of water consumed to the total amount. Formula is just the volume of a cylinder
-    water_consumed = water_consumed + (new_water_level - water_level) * (3.141592) * (0.5*width*width)
+    water_consumed = water_consumed + (new_water_level - water_level) * (3.141592) * (0.5*width*width);
   }
 }
 
